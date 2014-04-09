@@ -3,11 +3,10 @@ require 'rubygems'
 require 'json'
 
 def usage
-  puts 'Usage: execute-instance-recipes.rb <stack-id> <layer-id> <recipes> [\'custom-json\']'
+  puts 'Usage: execute-instance-recipes.rb <layer-id> <recipes> [\'custom-json\']'
   puts
   puts 'Runs recipes on all online instances in a layer, and reports their success via shell status_code.'
   puts
-  puts 'stack-id:    The OpsWorks Stack ID where the layer is located.'
   puts 'layer-id:    The OpsWorks Layer ID where the instances are located.'
   puts 'recipes:     JSON array of recipes to run, in the format of: \'["cookbook::recipe"]\'. Wrap in single quotes.'
   puts 'custom-json: Custom JSON to use for the deployment. Wrap in single quotes.'
@@ -29,14 +28,13 @@ else
   SINGLE_INSTANCE = false
 end
 
-if args.length < 3
+if args.length < 2
   usage
 end
 
-stack_id = args[0]
-layer_id = args[1]
-recipes = args[2]
-custom_json = args[3].nil? ? '' : args[3]
+layer_id = args[0]
+recipes = args[1]
+custom_json = args[2].nil? ? '' : args[2]
 
 # all instances in layer
 instances_command = %|aws opsworks describe-instances --layer-id #{layer_id}|
@@ -57,6 +55,17 @@ if SINGLE_INSTANCE
   print 'As requested, will only run on a single instance: '
   p instance_ids
 end
+
+# Find the Stack ID by validating the Layer
+layer_command = %|aws opsworks describe-layers --layer-ids #{layer_id}|
+layer = JSON.parse(`#{layer_command}`)['Layers'].first
+if layer.nil?
+  puts "Layer '#{layer_id}' was not found!"
+  exit 1
+end
+stack_id = layer['StackId']
+print 'Found layer with a Stack ID: '
+p stack_id
 
 # kick off the publish recipe
 publish_command = %|aws opsworks create-deployment --stack-id #{stack_id} --instance-ids #{instance_ids.join(' ')} --command='{"Name": "execute_recipes", "Args": {"recipes": #{recipes}}}'|
