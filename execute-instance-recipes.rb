@@ -67,6 +67,14 @@ stack_id = layer['StackId']
 print 'Found layer with a Stack ID: '
 p stack_id
 
+puts 'Creating OpsWorks deployment.'
+print 'Using recipes: '
+p recipes
+unless custom_json.empty?
+  print 'Using custom JSON: '
+  p custom_json
+end
+
 # kick off the publish recipe
 publish_command = %|aws opsworks create-deployment --stack-id #{stack_id} --instance-ids #{instance_ids.join(' ')} --command='{"Name": "execute_recipes", "Args": {"recipes": #{recipes}}}'|
 unless custom_json.empty?
@@ -79,7 +87,7 @@ if publish_id.empty?
   puts "Command: #{publish_command}"
   exit 1
 end
-print 'Created publish deployment, received ID of: '
+print 'Deployment ID received: '
 p publish_id
 
 status_command = %|aws opsworks describe-deployments --deployment-ids #{publish_id}|
