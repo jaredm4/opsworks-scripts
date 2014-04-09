@@ -3,8 +3,9 @@ require 'rubygems'
 require 'json'
 
 def usage
-  puts 'Runs recipes on all online instances in a layer, and reports their success via shell status_code.'
   puts 'Usage: execute-instance-recipes.rb <stack-id> <layer-id> <recipes> [\'custom-json\']'
+  puts
+  puts 'Runs recipes on all online instances in a layer, and reports their success via shell status_code.'
   puts
   puts 'stack-id:    The OpsWorks Stack ID where the layer is located.'
   puts 'layer-id:    The OpsWorks Layer ID where the instances are located.'
@@ -18,14 +19,24 @@ unless `which aws`
   usage
 end
 
-if ARGV.length < 3
+args = ARGV.dup
+
+# flag check
+if args.include? '--single'
+  args.delete '--single'
+  SINGLE_INSTANCE = true
+else
+  SINGLE_INSTANCE = false
+end
+
+if args.length < 3
   usage
 end
 
-stack_id = ARGV[0]
-layer_id = ARGV[1]
-recipes = ARGV[2]
-custom_json = ARGV[3].nil? ? '' : ARGV[3]
+stack_id = args[0]
+layer_id = args[1]
+recipes = args[2]
+custom_json = args[3].nil? ? '' : args[3]
 
 # all instances in layer
 instances_command = %|aws opsworks describe-instances --layer-id #{layer_id}|
@@ -41,7 +52,11 @@ instances.delete_if {|x| x['Status'] != 'online' }
 instance_ids = instances.collect {|x| x['InstanceId'] }
 print 'Found online instances: '
 p instance_ids
-
+if SINGLE_INSTANCE
+  instance_ids = instance_ids.take 1
+  print 'As requested, will only run on a single instance: '
+  p instance_ids
+end
 
 # kick off the publish recipe
 publish_command = %|aws opsworks create-deployment --stack-id #{stack_id} --instance-ids #{instance_ids.join(' ')} --command='{"Name": "execute_recipes", "Args": {"recipes": #{recipes}}}'|
