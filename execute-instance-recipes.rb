@@ -70,10 +70,10 @@ while Time.now < max_time
     status = JSON.parse(results)['Deployments'][0]['Status']
 
     if status == 'successful'
-      puts "deployment '#{publish_id}' on instances #{instance_ids} was successful."
+      puts "deployment was successful."
       exit 0
     elsif status == 'failed'
-      puts "deployment '#{publish_id}' on instances #{instance_ids} failed!.="
+      puts "deployment failed!"
       exit 1
     else
       puts status
